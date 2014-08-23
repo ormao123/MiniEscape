@@ -17,18 +17,35 @@ AddLoadCallback(
 			return
 		end
 		Config = scriptConfig("MiniEscape", "MiniEscape")
-		Config = Config:addParam()
+		Config = Config:addParam("flash", "Escape!", SCRIPT_PARAM_ONKEYTOGGLE, false, GetKey("V"))
+		Config = Config:addParam("duration", "Duration that Escape Remains on After Press", SCRIPT_PARAM_SLICE, 3, 1, 10)
+		Config = Config:addParam("autoLowHP", "Auto Escape on Low HP", SCRIPT_PARAM_ONOFF, false)
 		print("MiniEscape Loaded")
 	end)
 
-AddTickCallback(
-	function()
-		
+AddMsgCallback(
+	function(msg, key)
+		if (key == Config._param.flash.key) then
+			if (msg == KEY_UP) then
+				buttonDown = false
+			end
+			if (msg == KEY_DOWN) then
+				if (not buttonDown and Config.flash) then
+					DelayAction(
+						function()
+							if (Config.flash ~= false) then
+								Config.flash = false
+							end
+						end, Config.duration)
+					buttonDown = true
+				end
+			end
+		end
 	end)
 
 AddRecvPacketCallback(
 	function(p)
-		if (flashSlot ~= nil and p.header == 181) then
+		if (flashSlot ~= nil and (Config.flash or Config.autoLowHP) and p.header == 181) then
 			p.pos = 1
 			local blinker = objManager:GetObjectByNetworkId(p:DecodeF())
 			if (blinker ~= nil and blinker.valid and blinker.type == myHero.type and blinker.visible and blinker.team ~= myHero.team) then
@@ -69,10 +86,15 @@ AddRecvPacketCallback(
 							return false
 						end
 					if (towardsMe(pos)) then
-						local healthCheck =
-							function()
+						local checkHP =
+							function(enemy)
 								
+								return Config.flash
 							end
+
+						if (checkHP(blinker)) then
+
+						end
 						local flashpos = (Vector(myHero.visionPos) - pos):normalized() * 475
 						Packet("S_CAST", {spellId = flashSlot, toX = flashpos.x, toY = flashpos.z, fromX = flashpos.x, fromY = flashpos.z}):send()
 					end
