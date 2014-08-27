@@ -1,6 +1,7 @@
-local version = 1.0
+local version = 1.1
 local FLASH_RANGE = 400
 local HP_LIMIT = 0.8
+_OwnEnv = GetCurrentEnv().FILE_NAME:gsub(".lua", "")
 
 local delayedActions, delayedActionsExecuter = {}, nil
 local DelayActionEx = 
@@ -48,8 +49,9 @@ AddLoadCallback(
 		Config:addParam("duration", "Duration that Escape Remains on", SCRIPT_PARAM_SLICE, 3, 1, 10)
 		Config:addParam("autoLowHP", "Auto Escape on Low HP", SCRIPT_PARAM_ONOFF, false)
 		Config:addParam("dist", "Distance Required", SCRIPT_PARAM_SLICE, 100, 10, 800)
-		Config:addParam("angle", "Angle Required", SCRIPT_PARAM_SLICE, 180, 0, 180)
+		--Config:addParam("angle", "Angle Required", SCRIPT_PARAM_SLICE, 180, 0, 180)
 		Config:addParam("draw", "Notify When Escape is On", SCRIPT_PARAM_ONOFF, true)
+		Config.flash = false
 		print("MiniEscape Loaded")
 	end)
 
@@ -86,7 +88,7 @@ AddRecvPacketCallback(
 			if (blinker ~= nil and blinker.valid and blinker.type == myHero.type and blinker.visible and blinker.team ~= myHero.team) then	
 				p.pos = 12
 				local spell = p:Decode1()
-				if (spell == 0xA8) then
+				if (spell == 0x4) then
 					p.pos = 41
 					local x, y, z = p:DecodeF(), p:DecodeF(), p:DecodeF()
 					p.pos = 92
@@ -113,27 +115,26 @@ AddRecvPacketCallback(
 							return (startPos - (startPos - endPos):normalized() * FLASH_RANGE)
 						end
 					local pos = checkFinalPos(vStartPos, vEndPos)
-					local rotateVector =
-						function(from, towrads)
-							local c = from:crossP(towrads)
-							local f = c:crossP(from)
-							local angle = f:angleBetween(f, from)
-							finalPos = math.cos(angle) * from + math.sin(angle) * f
-							return finalPos
-						end
+					-- local rotateVector =
+					-- 	function(from, towrads)
+					-- 		local c = from:crossP(towrads)
+					-- 		local f = c:crossP(from)
+					-- 		local angle = f:angleBetween(f, from)
+					-- 		finalPos = math.cos(angle) * from + math.sin(angle) * f
+					-- 		return finalPos
+					-- 	end
 					local towardsMe = 
 						function(pos)
 							local myPos = Vector(myHero.visionPos.x, myHero.visionPos.y, myHero.visionPos.z)
-							print(pos:dist(myPos))
-							if (pos:dist(myPos) <= Config.dist) then
-								local newPos = rotateVector(myPos, pos)
-								local angleBetween = newPos:angleBetween(newPos, pos)
-								if (angleBetween <= Config.angle) then
-									return true
-								end
-								return true
-							end
-							return false
+							-- if (pos:dist(myPos) <= Config.dist) then
+							-- 	local newPos = rotateVector(myPos, pos)
+							-- 	local angleBetween = newPos:angleBetween(newPos, pos)
+							-- 	if (angleBetween <= Config.angle) then
+							-- 		return true
+							-- 	end
+							-- 	return true
+							-- end
+							return (pos:dist(myPos) <= Config.dist)
 						end
 					if (towardsMe(pos)) then
 						local checkHP =
@@ -145,10 +146,10 @@ AddRecvPacketCallback(
 							end
 
 						if (checkHP()) then
-							local myVisionPos = rotateVector(Vector(myHero.visionPos), pos)
-							local enemyPos = rotateVector(pos, myVisionPos)
-							local flashpos = (myVisionPos - pos):normalized() * FLASH_RANGE
-							Packet("S_CAST", {spellId = flashSlot, toX = flashpos.x, toY = flashpos.z, fromX = flashpos.x, fromY = flashpos.z}):send()
+							local myVisionPos = Vector(myHero.visionPos)
+							local delta = (myVisionPos - pos):normalized()
+							local flashPos = (myVisionPos) + (delta * FLASH_RANGE)
+							Packet("S_CAST", {spellId = flashSlot, toX = flashPos.x, toY = flashPos.z, fromX = flashPos.x, fromY = flashPos.z}):send()
 						end
 					end
 				end
@@ -156,13 +157,11 @@ AddRecvPacketCallback(
 		end
 	end)
 
---AUTOUPDATER, THANK YOU SUPERX321 SENPAI
-AddLoadCallback(
-	function()
-		print("<font color=\"#FF0F0F\">Loaded MiniEscape version " .. version .. ".</font>")
-		TCPU = TCPUpdater()
-		TCPU:AddScript(_OwnEnv, "Script", "raw.githubusercontent.com","/germansk8ter/MiniEscape/master/MiniEscape.lua","/germansk8ter/MiniEscape/master/MiniEscape.version", "local version =")
-	end)
+
+AddLoadCallback(function()
+	TCPU = TCPUpdater()
+	TCPU:AddScript(_OwnEnv, "Script", "raw.githubusercontent.com","/germansk8ter/MiniEscape/master/MiniEscape.lua","/germansk8ter/MiniEscape/master/MiniEscape.version", "local masteryGrabberVersion =")
+end)
 
 ------------------------
 ------ TCPUpdater ------
