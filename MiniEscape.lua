@@ -1,4 +1,4 @@
-local version = 1.1
+local version = 1.11
 local FLASH_RANGE = 400
 local HP_LIMIT = 0.8
 _OwnEnv = GetCurrentEnv().FILE_NAME:gsub(".lua", "")
@@ -32,9 +32,9 @@ AddLoadCallback(
 	function()
 		local findFlashSlot = 
 			function()
-				if (string.find(player:GetSpellData(SUMMONER_1).name, "SummonerFlash") ~= nil) then
+				if (string.find(player:GetSpellData(SUMMONER_1).name, "summonerflash") ~= nil) then
 					return SUMMONER_1
-				elseif (string.find(player:GetSpellData(SUMMONER_2).name, "SummonerFlash") ~= nil) then
+				elseif (string.find(player:GetSpellData(SUMMONER_2).name, "summonerflash") ~= nil) then
 					return SUMMONER_2
 				end
 				return nil
