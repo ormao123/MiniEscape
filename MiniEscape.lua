@@ -1,4 +1,4 @@
-local version = 1.2
+local version = 1.21
 local FLASH_RANGE = 400
 local HP_LIMIT = 0.8
 _OwnEnv = GetCurrentEnv().FILE_NAME:gsub(".lua", "")
@@ -121,7 +121,6 @@ local ProcessFlash =
 				end
 
 			if (checkHP()) then
-				print("hi")
 				local myVisionPos = Vector(myHero.visionPos)
 				local delta = (myVisionPos - pos):normalized()
 				local flashPos = (myVisionPos) + (delta * FLASH_RANGE)
