@@ -124,8 +124,12 @@ local ProcessFlash =
 				print("hi")
 				local myVisionPos = Vector(myHero.visionPos)
 				local delta = (myVisionPos - pos):normalized()
-				local flashPos = (myVisionPos) + (delta * FLASH_RANGE)
-				Packet("S_CAST", {spellId = _E, toX = flashPos.x, toY = flashPos.z, fromX = flashPos.x, fromY = flashPos.z}):send()
+				local flashPos = (myVisionPos) + (delta * FLASH_RANGE)3
+				if (VIP_USER) then
+					Packet("S_CAST", {spellId = flashSlot, toX = flashPos.x, toY = flashPos.z, fromX = flashPos.x, fromY = flashPos.z}):send()
+				else
+					CastSpell(flashSlot, flashPos.x, flashPos.z)
+				end
 			end
 		end
 	end
