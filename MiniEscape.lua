@@ -1,4 +1,4 @@
-local version = 1.11
+local version = 1.2
 local FLASH_RANGE = 400
 local HP_LIMIT = 0.8
 _OwnEnv = GetCurrentEnv().FILE_NAME:gsub(".lua", "")
@@ -80,87 +80,88 @@ AddDrawCallback(
 		end
 	end)
 
-AddRecvPacketCallback(
-	function(p)
-		if (flashSlot ~= nil and (Config.flash or Config.autoLowHP) and p.header == 0xB5) then
-			p.pos = 1
-			local blinker = objManager:GetObjectByNetworkId(p:DecodeF())
-			if (blinker ~= nil and blinker.valid and blinker.type == myHero.type and blinker.visible and blinker.team ~= myHero.team) then	
-				p.pos = 12
-				local spell = p:Decode1()
-				if (spell == 0x4) then
-					p.pos = 41
-					local x, y, z = p:DecodeF(), p:DecodeF(), p:DecodeF()
-					p.pos = 92
-					local startX, startY, startZ = p:DecodeF(), p:DecodeF(), p:DecodeF()
-					local checkData = 
-						function(x, y, z, actualPos)
-							if (x and y and z) then
-								local vector = Vector(x, y, z)
-								if (GetDistance(vector, actualPos) <= 30) then
-									return vector
-								end
-							end
-							return Vector(actualPos)
-						end
+local ProcessFlash =
+	function(blinker, pos, startPos)
+		local x, y, z = pos.x, pos.y, pos.z
+		local startX, startY, startZ = startPos.x, startPos.y, startPos.z
+		local checkData = 
+			function(x, y, z, actualPos)
+				if (x and y and z) then
+					local vector = Vector(x, y, z)
+					if (GetDistance(vector, actualPos) <= 30) then
+						return vector
+					end
+				end
+				return Vector(actualPos)
+			end
 
-					local vStartPos = checkData(startX, startY, startZ, blinker.visionPos)
-					local vEndPos = Vector(x, y, z)
-					local checkFinalPos = 
-						function(startPos, endPos)
-							if (GetDistance(startPos, endPos) <= FLASH_RANGE) then
-								return endPos
-							end
+		local vStartPos = checkData(startX, startY, startZ, blinker.visionPos)
+		local vEndPos = Vector(x, y, z)
+		local checkFinalPos = 
+			function(startPos, endPos)
+				if (GetDistance(startPos, endPos) <= FLASH_RANGE) then
+					return endPos
+				end
 
-							return (startPos - (startPos - endPos):normalized() * FLASH_RANGE)
-						end
-					local pos = checkFinalPos(vStartPos, vEndPos)
-					-- local rotateVector =
-					-- 	function(from, towrads)
-					-- 		local c = from:crossP(towrads)
-					-- 		local f = c:crossP(from)
-					-- 		local angle = f:angleBetween(f, from)
-					-- 		finalPos = math.cos(angle) * from + math.sin(angle) * f
-					-- 		return finalPos
-					-- 	end
-					local towardsMe = 
-						function(pos)
-							local myPos = Vector(myHero.visionPos.x, myHero.visionPos.y, myHero.visionPos.z)
-							-- if (pos:dist(myPos) <= Config.dist) then
-							-- 	local newPos = rotateVector(myPos, pos)
-							-- 	local angleBetween = newPos:angleBetween(newPos, pos)
-							-- 	if (angleBetween <= Config.angle) then
-							-- 		return true
-							-- 	end
-							-- 	return true
-							-- end
-							return (pos:dist(myPos) <= Config.dist)
-						end
-					if (towardsMe(pos)) then
-						local checkHP =
-							function()
-								if (not Config.flash and (myHero.maxHealth / myHero.health) < HP_LIMIT) then
-									return true
-								end
-								return Config.flash
-							end
+				return (startPos - (startPos - endPos):normalized() * FLASH_RANGE)
+			end
+		local pos = checkFinalPos(vStartPos, vEndPos)
+		local towardsMe = 
+			function(pos)
+				local myPos = Vector(myHero.visionPos.x, myHero.visionPos.y, myHero.visionPos.z)
+				return (pos:dist(myPos) <= Config.dist)
+			end
+		if (towardsMe(pos)) then
+			local checkHP =
+				function()
+					if (not Config.flash and (myHero.maxHealth / myHero.health) < HP_LIMIT) then
+						return true
+					end
+					return Config.flash
+				end
 
-						if (checkHP()) then
-							local myVisionPos = Vector(myHero.visionPos)
-							local delta = (myVisionPos - pos):normalized()
-							local flashPos = (myVisionPos) + (delta * FLASH_RANGE)
-							Packet("S_CAST", {spellId = flashSlot, toX = flashPos.x, toY = flashPos.z, fromX = flashPos.x, fromY = flashPos.z}):send()
-						end
+			if (checkHP()) then
+				print("hi")
+				local myVisionPos = Vector(myHero.visionPos)
+				local delta = (myVisionPos - pos):normalized()
+				local flashPos = (myVisionPos) + (delta * FLASH_RANGE)
+				Packet("S_CAST", {spellId = _E, toX = flashPos.x, toY = flashPos.z, fromX = flashPos.x, fromY = flashPos.z}):send()
+			end
+		end
+	end
+
+if (VIP_USER) then
+	AddRecvPacketCallback(
+		function(p)
+			if (flashSlot ~= nil and (Config.flash or Config.autoLowHP) and p.header == 0xB5) then
+				p.pos = 1
+				local blinker = objManager:GetObjectByNetworkId(p:DecodeF())
+				if (blinker ~= nil and blinker.valid and blinker.type == myHero.type and blinker.visible and blinker.team ~= myHero.team) then	
+					p.pos = 12
+					local spell = p:Decode1()
+					if (spell == 0x4) then
+						p.pos = 41
+						local x, y, z = p:DecodeF(), p:DecodeF(), p:DecodeF()
+						p.pos = 92
+						local startX, startY, startZ = p:DecodeF(), p:DecodeF(), p:DecodeF()
+						ProcessFlash(blinker, {x, y, z}, {startX, startY, startZ})
 					end
 				end
 			end
-		end
-	end)
+		end)
+else
+	AddProcessSpellCallback(
+		function(unit, spell)
+			if (unit and unit.valid and not unit.dead and unit.team ~= myHero.team and spell.name == "RiftWalk") then
+				ProcessFlash(unit, spell.startPos, spell.endPos)
+			end
+		end)
+end
 
 
 AddLoadCallback(function()
 	TCPU = TCPUpdater()
-	TCPU:AddScript(_OwnEnv, "Script", "raw.githubusercontent.com","/germansk8ter/MiniEscape/master/MiniEscape.lua","/germansk8ter/MiniEscape/master/MiniEscape.version", "local masteryGrabberVersion =")
+	TCPU:AddScript(_OwnEnv, "Script", "raw.githubusercontent.com","/germansk8ter/MiniEscape/master/MiniEscape.lua","/germansk8ter/MiniEscape/master/MiniEscape.version", "local version =")
 end)
 
 ------------------------
