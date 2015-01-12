@@ -1,4 +1,4 @@
-local version = 1.21
+local version = 1.22
 local FLASH_RANGE = 400
 local HP_LIMIT = 0.8
 _OwnEnv = GetCurrentEnv().FILE_NAME:gsub(".lua", "")
@@ -133,7 +133,7 @@ local ProcessFlash =
 		end
 	end
 
-if (VIP_USER) then
+if (false) then
 	AddRecvPacketCallback(
 		function(p)
 			if (flashSlot ~= nil and (Config.flash or Config.autoLowHP) and p.header == 0xB5) then
